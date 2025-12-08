@@ -6,6 +6,7 @@ import { useAtom } from 'jotai'
 import { tokenAtom, useInitializeUser } from '@/utils/user'
 import { fetchOrders, updateOrderStatus } from '@/api/orders-api'
 import { fetchProducts } from '@/api/product-api'
+import Loader from '@/utils/loader'
 
 const OrdersPage = () => {
   useInitializeUser()
@@ -104,7 +105,7 @@ const OrdersPage = () => {
 
       <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-4 md:p-6 overflow-x-auto">
         {loading ? (
-          <p className="text-gray-500 text-center py-6">Loading orders...</p>
+         <Loader />
         ) : error ? (
           <p className="text-red-500 text-center py-6">{error}</p>
         ) : orders.length === 0 ? (

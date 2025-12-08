@@ -171,6 +171,7 @@ import { GetCategory } from '@/utils/type'
 
 // New API for creating category
 import { createCategory } from '@/api/categories-api'
+import Loader from '@/utils/loader'
 
 const CategoriesPage = () => {
   useInitializeUser()
@@ -280,7 +281,7 @@ const CategoriesPage = () => {
         <p className="mb-4 text-gray-600">Edit or delete existing categories.</p>
 
         {loading ? (
-          <p className="text-gray-500">Loading categories...</p>
+          <Loader />
         ) : categories.length === 0 ? (
           <p className="text-gray-500">No categories found.</p>
         ) : (

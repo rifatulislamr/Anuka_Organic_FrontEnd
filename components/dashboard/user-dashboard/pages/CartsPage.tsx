@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useEffect } from 'react'
 import { GetCart } from '@/utils/type'
 import { Button } from '@/components/ui/button'
-import { Minus, Plus } from 'lucide-react'
+import { Loader, Minus, Plus } from 'lucide-react'
 import Image from 'next/image'
 
 const CartsPage = () => {
@@ -87,7 +87,10 @@ const CartsPage = () => {
     loadCarts()
   }, [loadCarts])
 
-  if (loading) return <p className="text-sm sm:text-base text-gray-600">Loading carts...</p>
+  if (loading) return 
+  <div>
+    <Loader />
+  </div>
   if (error) return <p className="text-sm sm:text-base text-red-500">{error}</p>
 
   return (

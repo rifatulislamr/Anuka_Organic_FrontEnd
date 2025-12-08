@@ -161,6 +161,7 @@ import { fetchCarts, createCart, deleteCart } from '@/api/cart-api'
 import { GetCart } from '@/utils/type'
 import { useAtom } from 'jotai'
 import { tokenAtom, useInitializeUser, userDataAtom } from '@/utils/user'
+import Loader from '@/utils/loader'
 
 const CartsPage = () => {
   useInitializeUser()
@@ -248,7 +249,7 @@ const CartsPage = () => {
       {/* ✅ Cart Table */}
       <div className="bg-white rounded-lg shadow p-6">
         {loading ? (
-          <p>Loading carts...</p>
+          <Loader />
         ) : error ? (
           <p className="text-red-500">{error}</p>
         ) : carts.length === 0 ? (

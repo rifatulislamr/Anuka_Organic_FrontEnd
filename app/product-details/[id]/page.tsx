@@ -100,6 +100,7 @@ import { GetProduct } from '@/utils/type'
 import { useAtom } from 'jotai'
 import { tokenAtom, useInitializeUser } from '@/utils/user'
 import { Toaster } from '@/components/ui/toaster'
+import Loader from '@/utils/loader'
 
 export default function ProductDetailsPage() {
   useInitializeUser()
@@ -143,8 +144,8 @@ export default function ProductDetailsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-lg text-gray-600">Loading product...</p>
+      <div className="flex items-center justify-center">
+       <Loader />
       </div>
     )
   }

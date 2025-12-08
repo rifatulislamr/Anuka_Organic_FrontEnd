@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { getUsers } from '@/api/users-api'
 import { Users } from '@/utils/type'
+import Loader from '@/utils/loader'
 
 
 interface UsersPageProps {
@@ -75,7 +76,9 @@ const UsersPage: React.FC<UsersPageProps> = ({ token }) => {
 
       <div className="bg-white shadow-lg rounded-2xl overflow-hidden">
         {loading ? (
-          <div className="p-6 text-center text-gray-500">Loading users...</div>
+          <div>
+            <Loader />
+          </div>
         ) : currentUsers.length === 0 ? (
           <div className="p-6 text-center text-gray-500">No users found</div>
         ) : (

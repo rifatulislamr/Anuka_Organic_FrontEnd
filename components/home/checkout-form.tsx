@@ -23,6 +23,8 @@ export default function CheckoutForm({
   const [paymentMethod, setPaymentMethod] = useState('cash')
   const [bkashNumber, setBkashNumber] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
+  const [deliveryLocation, setDeliveryLocation] = useState('chittagong')
+  const deliveryFee = deliveryLocation === 'chittagong' ? 50 : 120
 
   const handlePaymentSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -142,7 +144,7 @@ export default function CheckoutForm({
             </div>
           )}
 
-          <div className="bg-gray-50 p-4 rounded-lg">
+          {/* <div className="bg-gray-50 p-4 rounded-lg">
             <h4 className="font-medium text-gray-900 mb-2">Order Summary</h4>
             <div className="space-y-1 text-sm">
               <div className="flex justify-between">
@@ -156,6 +158,55 @@ export default function CheckoutForm({
               <div className="flex justify-between font-semibold text-lg border-t pt-2">
                 <span>Total:</span>
                 <span>৳{cartTotal + 50}</span>
+              </div>
+            </div>
+          </div> */}
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h4 className="font-medium text-gray-900 mb-2">Order Summary</h4>
+
+            {/* Delivery Location Selection */}
+            <div className="mb-3 pb-3 border-b">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Delivery Location
+              </label>
+              <div className="space-y-2">
+                <label className="flex items-center cursor-pointer">
+                  <input
+                    type="radio"
+                    name="deliveryLocation"
+                    value="chittagong"
+                    checked={deliveryLocation === 'chittagong'}
+                    onChange={(e) => setDeliveryLocation(e.target.value)}
+                    className="mr-2"
+                  />
+                  <span className="text-sm">In Chittagong (৳50)</span>
+                </label>
+                <label className="flex items-center cursor-pointer">
+                  <input
+                    type="radio"
+                    name="deliveryLocation"
+                    value="outside"
+                    checked={deliveryLocation === 'outside'}
+                    onChange={(e) => setDeliveryLocation(e.target.value)}
+                    className="mr-2"
+                  />
+                  <span className="text-sm">Outside Chittagong (৳120)</span>
+                </label>
+              </div>
+            </div>
+
+            <div className="space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span>Subtotal:</span>
+                <span>৳{cartTotal}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Delivery Fee:</span>
+                <span>৳{deliveryFee}</span>
+              </div>
+              <div className="flex justify-between font-semibold text-lg border-t pt-2">
+                <span>Total:</span>
+                <span>৳{cartTotal + deliveryFee}</span>
               </div>
             </div>
           </div>

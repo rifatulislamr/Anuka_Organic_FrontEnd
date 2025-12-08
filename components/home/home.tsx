@@ -22,6 +22,7 @@ import { tokenAtom, useInitializeUser, userDataAtom } from '@/utils/user'
 import { GetProduct, GetCategory, GetCart } from '@/utils/type'
 import { createOrderApi } from '@/api/orders-api'
 import { Toaster } from '@/components/ui/toaster'
+import Loader from '@/utils/loader'
 
 export default function Home() {
   useInitializeUser()
@@ -116,35 +117,39 @@ export default function Home() {
   }, [loadGuestCart])
 
   // Merge guest cart with user cart on login
-  const mergeGuestCartWithUserCart = useCallback(async (authToken: string) => {
-    if (!authToken || typeof window === 'undefined') return
+  const mergeGuestCartWithUserCart = useCallback(
+    async (authToken: string) => {
+      if (!authToken || typeof window === 'undefined') return
 
-    const guestCart = localStorage.getItem('guestCart')
-    if (guestCart) {
-      try {
-        const parsedGuestCart: GetCart[] = JSON.parse(guestCart)
-        
-        if (parsedGuestCart.length === 0) return
-        
-        // Add each guest cart item to user's database cart
-        for (const item of parsedGuestCart) {
-          for (let i = 0; i < item.quantity; i++) {
-            await createCart(authToken, { productId: item.productId })
+      const guestCart = localStorage.getItem('guestCart')
+      if (guestCart) {
+        try {
+          const parsedGuestCart: GetCart[] = JSON.parse(guestCart)
+
+          if (parsedGuestCart.length === 0) return
+
+          // Add each guest cart item to user's database cart
+          for (const item of parsedGuestCart) {
+            for (let i = 0; i < item.quantity; i++) {
+              await createCart(authToken, { productId: item.productId })
+            }
           }
-        }
 
-        // Clear guest cart from localStorage
-        localStorage.removeItem('guestCart')
-        
-        toast({
-          title: 'Cart Merged',
-          description: 'Your guest cart items have been added to your account.',
-        })
-      } catch (err) {
-        console.error('Failed to merge guest cart:', err)
+          // Clear guest cart from localStorage
+          localStorage.removeItem('guestCart')
+
+          toast({
+            title: 'Cart Merged',
+            description:
+              'Your guest cart items have been added to your account.',
+          })
+        } catch (err) {
+          console.error('Failed to merge guest cart:', err)
+        }
       }
-    }
-  }, [toast])
+    },
+    [toast]
+  )
 
   useEffect(() => {
     getCategories()
@@ -193,9 +198,7 @@ export default function Home() {
 
   // Add to cart function - ALWAYS store in localStorage (for both guest and logged-in users)
   const addToCart = async (product: GetProduct) => {
-    const existingItem = cartItems.find(
-      (item) => item.productId === product.id
-    )
+    const existingItem = cartItems.find((item) => item.productId === product.id)
 
     let updatedCart: GetCart[]
     if (existingItem) {
@@ -242,9 +245,7 @@ export default function Home() {
     } else {
       // Update quantity
       updatedCart = cartItems.map((item) =>
-        item.productId === productId
-          ? { ...item, quantity: newQuantity }
-          : item
+        item.productId === productId ? { ...item, quantity: newQuantity } : item
       )
     }
 
@@ -292,7 +293,7 @@ export default function Home() {
     localStorage.setItem('currentUser', JSON.stringify(user))
     localStorage.setItem('roleId', String(user.roleId ?? 0))
     setSavedRoleId(user.roleId ?? 0)
-    
+
     // Don't merge cart - keep everything in localStorage
     // Just refresh the page after successful login
     window.location.reload()
@@ -394,7 +395,13 @@ export default function Home() {
     }
   }
 
-  if (loading) return <p className="text-center mt-10">Loading...</p>
+  if (loading)
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader />
+      </div>
+    )
+
   if (error) return <p className="text-center text-red-500">{error}</p>
 
   return (
@@ -498,7 +505,6 @@ export default function Home() {
                           onAddToCart={addToCart}
                         />
                       ))}
-                     
                     </div>
 
                     {isExpanded && hasMore && (
@@ -525,11 +531,7 @@ export default function Home() {
       )}
 
       {/* Product Details Modal */}
-      {selectedProduct && (
-        <ProductDetails
-          product={selectedProduct}
-        />
-      )}
+      {selectedProduct && <ProductDetails product={selectedProduct} />}
 
       {/* Cart Sidebar */}
       {isCartOpen && (
@@ -666,7 +668,11 @@ export default function Home() {
         onClose={() => setIsRegisterOpen(false)}
         onRegister={async (user) => {
           // After registration, trigger login flow
-          await handleLogin({ userId: 0, username: user.username, email: user.email })
+          await handleLogin({
+            userId: 0,
+            username: user.username,
+            email: user.email,
+          })
         }}
         onSwitchToLogin={() => {
           setIsRegisterOpen(false)
@@ -1183,7 +1189,7 @@ export default function Home() {
 //                           onAddToCart={addToCart}
 //                         />
 //                       ))}
-                     
+
 //                     </div>
 
 //                     {isExpanded && hasMore && (

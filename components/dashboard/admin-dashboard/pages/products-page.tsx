@@ -11,6 +11,7 @@ import {
 } from '@/api/product-api'
 import { tokenAtom, useInitializeUser } from '@/utils/user'
 import { fetchCategories } from '@/api/categories-api'
+import Loader from '@/utils/loader'
 
 const ProductsPage = () => {
   useInitializeUser()
@@ -129,7 +130,10 @@ const ProductsPage = () => {
     }
   }
 
-  if (loading) return <p>Loading products...</p>
+  if (loading) return 
+   <div className="flex items-center justify-center min-h-screen">
+        <Loader />
+      </div>
   if (error) return <p className="text-red-500">{error}</p>
 
   // Filtered & paginated products

@@ -10,6 +10,7 @@ import { getUserByIdApi } from '@/api/users-api'
 import { useAtom } from 'jotai'
 import { tokenAtom, useInitializeUser, userDataAtom } from '@/utils/user'
 import { Users } from '@/utils/type'
+import Loader from '@/utils/loader'
 
 // ✅ User type
 export type User = {
@@ -105,13 +106,8 @@ const UserDashboard = () => {
   const renderPage = () => {
     if (loading) {
       return (
-        <div className="flex items-center justify-center h-full min-h-[50vh]">
-          <div className="text-center">
-            <div className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-gray-600 text-sm sm:text-base">
-              Loading user data...
-            </p>
-          </div>
+        <div>
+          <Loader />
         </div>
       )
     }
@@ -209,9 +205,9 @@ const UserDashboard = () => {
         <div className="p-4 sm:p-6 lg:p-8 overflow-y-auto max-h-screen">
           <button
             onClick={() => router.push('/')}
-            className="mb-4 sm:mb-6 mt-14 lg:mt-0 flex items-center gap-2 text-green-600 hover:text-green-800 transition-colors font-medium text-sm sm:text-base"
+            className="mb-4 sm:mb-6 mt-14 lg:mt-0 flex items-center gap-2 text-green-600 hover:text-green-800 transition-colors font-medium text-sm sm:text-base  lg:static bg-white lg:bg-transparent px-3 py-2 rounded-lg shadow lg:shadow-none"
           >
-            <svg
+            {/* <svg
               className="w-4 h-4 sm:w-5 sm:h-5"
               fill="none"
               stroke="currentColor"
@@ -223,9 +219,9 @@ const UserDashboard = () => {
                 strokeWidth={2}
                 d="M10 19l-7-7m0 0l7-7m-7 7h18"
               />
-            </svg>
+            </svg> */}
             <span className="hidden sm:inline">Back to Home</span>
-            <span className="sm:hidden">Back</span>
+            <span className="sm:hidden ">Back</span>
           </button>
 
           {/* Responsive wrapper with Tailwind classes */}
