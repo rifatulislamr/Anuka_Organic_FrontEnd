@@ -173,7 +173,6 @@ export default function Navbar({
                     height={100}
                     className="object-contain rounded-full"
                   />
-                 
                 </div>
               </Link>
 
@@ -229,13 +228,21 @@ export default function Navbar({
                   placeholder="Search for organic products..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full pl-10 pr-10 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 />
                 {searchQuery && (
-                  <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-b-lg shadow-lg mt-1 p-2 text-sm text-gray-600">
-                    Found {filteredProducts.length} products matching{' '}
-                    {searchQuery}
-                  </div>
+                  <>
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      <X className="w-5 h-5 rounded-full" />
+                    </button>
+                    <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-b-lg shadow-lg mt-1 p-2 text-sm text-gray-600">
+                      Found {filteredProducts.length} products matching{' '}
+                      {searchQuery}
+                    </div>
+                  </>
                 )}
               </div>
             </div>
@@ -348,12 +355,20 @@ export default function Navbar({
                 placeholder="Search products..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full pl-10 pr-10 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
               {searchQuery && (
-                <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-b-lg shadow-lg mt-1 p-2 text-sm text-gray-600 z-50">
-                  Found {filteredProducts.length} products
-                </div>
+                <>
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                  <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-b-lg shadow-lg mt-1 p-2 text-sm text-gray-600 z-50">
+                    Found {filteredProducts.length} products
+                  </div>
+                </>
               )}
             </div>
           </div>
@@ -403,5 +418,3 @@ export default function Navbar({
     </>
   )
 }
-
-
