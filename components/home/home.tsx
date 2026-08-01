@@ -404,6 +404,14 @@ export default function Home() {
 
   if (error) return <p className="text-center text-red-500">{error}</p>
 
+  // utils/image.ts
+const IMAGE_BASE_URL = process.env.NEXT_PUBLIC_IMAGE_BASE_URL || 'https://anukabd.com/api/uploads'
+
+ const getProductImageUrl = (url: string) => {
+  if (!url) return '/placeholder.png' // fallback
+  return url.startsWith('http') ? url : `${IMAGE_BASE_URL}/${url}`
+}
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Navbar */}
@@ -434,17 +442,23 @@ export default function Home() {
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
             {filteredProducts.map((product) => (
+              // <ProductCard
+              //   key={product.id}
+              //   product={{
+              //     ...product,
+              //     url: product.url.startsWith('http')
+              //       ? product.url
+              //       : `https://anukabd.com/api/uploads/${product.url}`,
+              //   }}
+              //   onProductClick={openProductModal}
+              //   onAddToCart={addToCart}
+              // />
               <ProductCard
-                key={product.id}
-                product={{
-                  ...product,
-                  url: product.url.startsWith('http')
-                    ? product.url
-                    : `https://anukabd.com/api/uploads/${product.url}`,
-                }}
-                onProductClick={openProductModal}
-                onAddToCart={addToCart}
-              />
+  key={product.id}
+  product={{ ...product, url: getProductImageUrl(product.url) }}
+  onProductClick={openProductModal}
+  onAddToCart={addToCart}
+/>
             ))}
           </div>
         </section>
@@ -497,9 +511,7 @@ export default function Home() {
                           key={product.id}
                           product={{
                             ...product,
-                            url: product.url.startsWith('http')
-                              ? product.url
-                              : `https://anukabd.com/api/uploads/${product.url}`,
+                            url: getProductImageUrl(product.url)
                           }}
                           onProductClick={openProductModal}
                           onAddToCart={addToCart}
