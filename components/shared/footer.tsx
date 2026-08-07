@@ -38,6 +38,7 @@ export default function Footer() {
                       width={80}
                       height={100}
                       className="object-contain rounded-md"
+                      style={{ width: '80px', height: '100px' }}
                     />
                   </span>
                 </span>

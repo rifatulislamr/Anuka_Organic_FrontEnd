@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Sidebar from './pages/Sidebar'
 import CartsPage from './pages/CartsPage'
 import OrdersPage from './pages/OrdersPage'
@@ -11,6 +11,7 @@ import { useAtom } from 'jotai'
 import { tokenAtom, useInitializeUser, userDataAtom } from '@/utils/user'
 import { Users } from '@/utils/type'
 import Loader from '@/utils/loader'
+import { Menu, X } from 'lucide-react'
 
 // ✅ User type
 export type User = {
@@ -42,28 +43,46 @@ export type User = {
   } | null
 }
 
+type PageKey = 'profile' | 'orders' | 'carts'
+const VALID_PAGES: PageKey[] = ['profile', 'orders', 'carts']
+
 const UserDashboard = () => {
-  const [activePage, setActivePage] = useState<'profile' | 'orders' | 'carts'>(
-    'profile'
+  useInitializeUser()
+  const [token] = useAtom(tokenAtom)
+  const [userData] = useAtom(userDataAtom)
+  const router = useRouter()
+  const searchParams = useSearchParams()
+
+  // Read initial tab from URL (?page=orders), fallback to 'profile' — same pattern as AdminDashboard
+  const pageFromUrl = searchParams.get('page') as PageKey | null
+  const [activePage, setActivePage] = useState<PageKey>(
+    pageFromUrl && VALID_PAGES.includes(pageFromUrl) ? pageFromUrl : 'profile'
   )
   const [user, setUser] = useState<Users | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const [token] = useAtom(tokenAtom)
-  useInitializeUser()
-  const [userData] = useAtom(userDataAtom)
-  const router = useRouter()
+
+  // Keep state in sync if user navigates back/forward or URL changes externally
+  useEffect(() => {
+    const urlPage = searchParams.get('page') as PageKey | null
+    if (urlPage && VALID_PAGES.includes(urlPage)) {
+      setActivePage((prev) => (prev !== urlPage ? urlPage : prev))
+    }
+  }, [searchParams])
 
   const fetchUser = useCallback(async () => {
     if (!userData?.userId || !token) {
-      setLoading(false)
-      setError('No user ID or token found. Please log in.')
+      // Token/user not loaded yet (useInitializeUser still resolving) — keep
+      // showing the loader instead of flashing a "please log in" error.
+      // This will re-run automatically once token/userData become available
+      // (they're in the deps array below).
       return
     }
 
     try {
       setLoading(true)
+      setError(null)
       const response = await getUserByIdApi(token, userData.userId)
       if (response?.data) {
         setUser(response.data)
@@ -96,32 +115,33 @@ const UserDashboard = () => {
     setUser(updatedUser)
   }
 
-  const handlePageChange = (
-    value: React.SetStateAction<'profile' | 'orders' | 'carts'>
-  ) => {
-    setActivePage(value)
+  const handlePageChange = (page: PageKey) => {
+    setActivePage(page)
     setIsMobileMenuOpen(false)
+    router.push(`?page=${page}`, { scroll: false })
+  }
+
+  const pageTitles: Record<PageKey, string> = {
+    profile: 'My Profile',
+    orders: 'My Orders',
+    carts: 'My Cart',
   }
 
   const renderPage = () => {
     if (loading) {
-      return (
-        <div>
-          <Loader />
-        </div>
-      )
+      return <Loader />
     }
 
     if (error) {
       return (
-        <div className="flex items-center justify-center h-full min-h-[50vh] px-4">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 sm:p-6 max-w-md w-full">
+        <div className="flex items-center justify-center min-h-[50vh] px-4">
+          <div className="bg-red-50 border border-red-100 rounded-2xl p-4 sm:p-6 max-w-md w-full">
             <p className="text-red-700 text-center mb-4 text-sm sm:text-base">
               {error}
             </p>
             <button
               onClick={fetchUser}
-              className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm sm:text-base"
+              className="w-full px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm sm:text-base font-medium"
             >
               Retry
             </button>
@@ -149,122 +169,50 @@ const UserDashboard = () => {
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-100">
-      {/* Mobile Menu Button - Fixed Position */}
-      <button
-        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2.5 bg-white rounded-lg shadow-lg hover:bg-gray-50 transition-colors"
-        aria-label="Toggle menu"
-      >
-        <svg
-          className="w-6 h-6 text-gray-700"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
+    <div className="flex min-h-screen bg-gray-50">
+      {/* Mobile Top Bar */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-white border-b border-gray-200 flex items-center justify-between px-4 z-40 shadow-sm">
+        <button
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          className="p-2 -ml-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-700"
+          aria-label="Toggle menu"
         >
-          {isMobileMenuOpen ? (
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M6 18L18 6M6 6l12 12"
-            />
-          ) : (
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M4 6h16M4 12h16M4 18h16"
-            />
-          )}
-        </svg>
-      </button>
+          {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+        </button>
+        <h2 className="text-sm font-semibold text-gray-800">
+          {pageTitles[activePage]}
+        </h2>
+        <div className="w-9" />
+      </div>
 
       {/* Mobile Overlay */}
       {isMobileMenuOpen && (
         <div
-          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-30 transition-opacity"
+          className="lg:hidden fixed inset-0 bg-black/40 z-30 transition-opacity"
           onClick={() => setIsMobileMenuOpen(false)}
           aria-hidden="true"
         />
       )}
 
-      {/* Sidebar */}
-      <div
+      {/* Sidebar - fixed width, fixed position, like admin dashboard */}
+      <aside
         className={`
-          fixed lg:static inset-y-0 left-0 z-40 w-64 lg:w-auto
-          transform lg:transform-none transition-transform duration-300 ease-in-out
-          ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+          w-64 fixed top-0 left-0 bottom-0 z-50
+          transform transition-transform duration-300 ease-in-out
+          ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0
         `}
       >
-        <Sidebar activePage={activePage} setActivePage={handlePageChange} />
-      </div>
+        <Sidebar
+          activePage={activePage}
+          setActivePage={handlePageChange}
+          onHome={() => router.push('/')}
+        />
+      </aside>
 
       {/* Main Content */}
-      <main className="flex-1 w-full lg:w-auto min-h-screen">
-        <div className="p-4 sm:p-6 lg:p-8 overflow-y-auto max-h-screen">
-          <button
-            onClick={() => router.push('/')}
-            className="mb-4 sm:mb-6 mt-14 lg:mt-0 flex items-center gap-2 text-green-600 hover:text-green-800 transition-colors font-medium text-sm sm:text-base  lg:static bg-white lg:bg-transparent px-3 py-2 rounded-lg shadow lg:shadow-none"
-          >
-            {/* <svg
-              className="w-4 h-4 sm:w-5 sm:h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M10 19l-7-7m0 0l7-7m-7 7h18"
-              />
-            </svg> */}
-            <span className="hidden sm:inline">Back to Home</span>
-            <span className="sm:hidden ">Back</span>
-          </button>
-
-          {/* Responsive wrapper with Tailwind classes */}
-          <div className="w-full">
-            <style jsx global>{`
-              /* Mobile: Extra small fonts and images */
-              @media (max-width: 640px) {
-                .mobile-responsive-content * {
-                  font-size: 10px !important;
-                }
-                .mobile-responsive-content h1 {
-                  font-size: 18px !important;
-                }
-                .mobile-responsive-content h2 {
-                  font-size: 16px !important;
-                }
-                .mobile-responsive-content h3 {
-                  font-size: 14px !important;
-                }
-                .mobile-responsive-content img {
-                  max-width: 30px !important;
-                  max-height: 30px !important;
-                  width: 30px !important;
-                  height: 30px !important;
-                }
-                .mobile-responsive-content table {
-                  display: block !important;
-                  overflow-x: auto !important;
-                  -webkit-overflow-scrolling: touch !important;
-                  white-space: nowrap !important;
-                }
-                .mobile-responsive-content th,
-                .mobile-responsive-content td {
-                  padding: 4px 2px !important;
-                }
-                .mobile-responsive-content button {
-                  padding: 4px 8px !important;
-                  font-size: 10px !important;
-                }
-              }
-            `}</style>
-            <div className="mobile-responsive-content">{renderPage()}</div>
-          </div>
+      <main className="flex-1 lg:ml-64 w-full min-h-screen">
+        <div className="p-3 sm:p-6 lg:p-8 pt-16 lg:pt-8 overflow-y-auto max-h-screen">
+          <div className="w-full">{renderPage()}</div>
         </div>
       </main>
     </div>

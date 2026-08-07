@@ -169,9 +169,10 @@ export default function Navbar({
                   <Image
                     src="/logo.jpg"
                     alt="Anuka Logo"
-                    width={120}
+                    width={100}
                     height={100}
                     className="object-contain rounded-full"
+                    style={{ width: '100px', height: '100px' }}
                   />
                 </div>
               </Link>

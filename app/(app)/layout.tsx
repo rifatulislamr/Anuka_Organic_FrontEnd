@@ -9,7 +9,7 @@ import { Toaster } from '@/components/ui/toaster'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Asset Manager',
+  title: 'Anuka BD',
   description: 'Created with Next.js, TypeScript, Tailwind CSS, and shadcn/ui',
 }
 

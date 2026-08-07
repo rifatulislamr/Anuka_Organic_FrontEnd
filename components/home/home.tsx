@@ -14,9 +14,7 @@ import ProductDetails from '../product/product-details'
 import Navbar from '../shared/navbar'
 import { fetchProducts } from '@/api/product-api'
 import { fetchCategories } from '@/api/categories-api'
-import { createCart, fetchCarts, deleteCart } from '@/api/cart-api'
 import { useToast } from '@/hooks/use-toast'
-
 import { useAtom } from 'jotai'
 import { tokenAtom, useInitializeUser, userDataAtom } from '@/utils/user'
 import { GetProduct, GetCategory, GetCart } from '@/utils/type'
@@ -61,7 +59,6 @@ export default function Home() {
 
   // Refs for scrolling
   const categoryRefs = useRef<Record<number, HTMLElement | null>>({})
-  const productRefs = useRef<Record<number, HTMLElement | null>>({})
 
   // Fetch categories
   const getCategories = useCallback(async () => {
@@ -116,41 +113,6 @@ export default function Home() {
     loadGuestCart()
   }, [loadGuestCart])
 
-  // Merge guest cart with user cart on login
-  const mergeGuestCartWithUserCart = useCallback(
-    async (authToken: string) => {
-      if (!authToken || typeof window === 'undefined') return
-
-      const guestCart = localStorage.getItem('guestCart')
-      if (guestCart) {
-        try {
-          const parsedGuestCart: GetCart[] = JSON.parse(guestCart)
-
-          if (parsedGuestCart.length === 0) return
-
-          // Add each guest cart item to user's database cart
-          for (const item of parsedGuestCart) {
-            for (let i = 0; i < item.quantity; i++) {
-              await createCart(authToken, { productId: item.productId })
-            }
-          }
-
-          // Clear guest cart from localStorage
-          localStorage.removeItem('guestCart')
-
-          toast({
-            title: 'Cart Merged',
-            description:
-              'Your guest cart items have been added to your account.',
-          })
-        } catch (err) {
-          console.error('Failed to merge guest cart:', err)
-        }
-      }
-    },
-    [toast]
-  )
-
   useEffect(() => {
     getCategories()
     getProducts()
@@ -185,11 +147,8 @@ export default function Home() {
 
   // Handle product click from navbar submenu
   const handleProductClickFromNav = (productId: number) => {
-    console.log('Product clicked from nav:', productId)
     const product = products.find((p) => p.id === productId)
-    console.log('Found product:', product)
     if (product) {
-      // Open the product modal
       openProductModal(product)
     } else {
       console.error('Product not found with ID:', productId)
@@ -404,14 +363,6 @@ export default function Home() {
 
   if (error) return <p className="text-center text-red-500">{error}</p>
 
-  // utils/image.ts
-const IMAGE_BASE_URL = process.env.NEXT_PUBLIC_IMAGE_BASE_URL || 'https://anukabd.com/api/uploads'
-
- const getProductImageUrl = (url: string) => {
-  if (!url) return '/placeholder.png' // fallback
-  return url.startsWith('http') ? url : `${IMAGE_BASE_URL}/${url}`
-}
-
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Navbar */}
@@ -442,23 +393,17 @@ const IMAGE_BASE_URL = process.env.NEXT_PUBLIC_IMAGE_BASE_URL || 'https://anukab
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
             {filteredProducts.map((product) => (
-              // <ProductCard
-              //   key={product.id}
-              //   product={{
-              //     ...product,
-              //     url: product.url.startsWith('http')
-              //       ? product.url
-              //       : `https://anukabd.com/api/uploads/${product.url}`,
-              //   }}
-              //   onProductClick={openProductModal}
-              //   onAddToCart={addToCart}
-              // />
               <ProductCard
-  key={product.id}
-  product={{ ...product, url: getProductImageUrl(product.url) }}
-  onProductClick={openProductModal}
-  onAddToCart={addToCart}
-/>
+                key={product.id}
+                product={{
+                  ...product,
+                  url: product.url.startsWith('http')
+                    ? product.url
+                    : `http://localhost:4000/uploads/${product.url}`,
+                }}
+                onProductClick={openProductModal}
+                onAddToCart={addToCart}
+              />
             ))}
           </div>
         </section>
@@ -511,7 +456,9 @@ const IMAGE_BASE_URL = process.env.NEXT_PUBLIC_IMAGE_BASE_URL || 'https://anukab
                           key={product.id}
                           product={{
                             ...product,
-                            url: getProductImageUrl(product.url)
+                            url: product.url.startsWith('http')
+                              ? product.url
+                              : `http://localhost:4000/uploads/${product.url}`,
                           }}
                           onProductClick={openProductModal}
                           onAddToCart={addToCart}
@@ -543,7 +490,9 @@ const IMAGE_BASE_URL = process.env.NEXT_PUBLIC_IMAGE_BASE_URL || 'https://anukab
       )}
 
       {/* Product Details Modal */}
-      {selectedProduct && <ProductDetails product={selectedProduct} />}
+      {isProductModalOpen && selectedProduct && (
+        <ProductDetails product={selectedProduct} onClose={closeProductModal} />
+      )}
 
       {/* Cart Sidebar */}
       {isCartOpen && (
@@ -588,7 +537,7 @@ const IMAGE_BASE_URL = process.env.NEXT_PUBLIC_IMAGE_BASE_URL || 'https://anukab
                         src={
                           item.url?.startsWith('http')
                             ? item.url
-                            : `https://anukabd.com/api/uploads/${item.url}`
+                            : `http://localhost:4000/uploads/${item.url}`
                         }
                         alt={item.name}
                         className="w-12 h-12 sm:w-16 sm:h-16 object-cover rounded"
@@ -733,6 +682,7 @@ const IMAGE_BASE_URL = process.env.NEXT_PUBLIC_IMAGE_BASE_URL || 'https://anukab
 // import { GetProduct, GetCategory, GetCart } from '@/utils/type'
 // import { createOrderApi } from '@/api/orders-api'
 // import { Toaster } from '@/components/ui/toaster'
+// import Loader from '@/utils/loader'
 
 // export default function Home() {
 //   useInitializeUser()
@@ -797,16 +747,69 @@ const IMAGE_BASE_URL = process.env.NEXT_PUBLIC_IMAGE_BASE_URL || 'https://anukab
 //     }
 //   }, [token])
 
+//   // Load cart from localStorage for guest users
+//   const loadGuestCart = useCallback(() => {
+//     if (typeof window !== 'undefined') {
+//       const guestCart = localStorage.getItem('guestCart')
+//       if (guestCart) {
+//         try {
+//           const parsedCart = JSON.parse(guestCart)
+//           setCartItems(parsedCart)
+//         } catch (err) {
+//           console.error('Failed to parse guest cart:', err)
+//           localStorage.removeItem('guestCart')
+//         }
+//       }
+//     }
+//   }, [])
+
+//   // Save cart to localStorage for guest users
+//   const saveGuestCart = useCallback((cart: GetCart[]) => {
+//     if (typeof window !== 'undefined') {
+//       localStorage.setItem('guestCart', JSON.stringify(cart))
+//     }
+//   }, [])
+
 //   // Fetch user cart from DB
 //   const loadUserCart = useCallback(async () => {
-//     if (!token) return
-//     try {
-//       const res = await fetchCarts(token)
-//       setCartItems(res.data ?? [])
-//     } catch (err) {
-//       console.error(err)
-//     }
-//   }, [token])
+//     // ALWAYS load from localStorage, regardless of login status
+//     loadGuestCart()
+//   }, [loadGuestCart])
+
+//   // Merge guest cart with user cart on login
+//   const mergeGuestCartWithUserCart = useCallback(
+//     async (authToken: string) => {
+//       if (!authToken || typeof window === 'undefined') return
+
+//       const guestCart = localStorage.getItem('guestCart')
+//       if (guestCart) {
+//         try {
+//           const parsedGuestCart: GetCart[] = JSON.parse(guestCart)
+
+//           if (parsedGuestCart.length === 0) return
+
+//           // Add each guest cart item to user's database cart
+//           for (const item of parsedGuestCart) {
+//             for (let i = 0; i < item.quantity; i++) {
+//               await createCart(authToken, { productId: item.productId })
+//             }
+//           }
+
+//           // Clear guest cart from localStorage
+//           localStorage.removeItem('guestCart')
+
+//           toast({
+//             title: 'Cart Merged',
+//             description:
+//               'Your guest cart items have been added to your account.',
+//           })
+//         } catch (err) {
+//           console.error('Failed to merge guest cart:', err)
+//         }
+//       }
+//     },
+//     [toast]
+//   )
 
 //   useEffect(() => {
 //     getCategories()
@@ -853,97 +856,61 @@ const IMAGE_BASE_URL = process.env.NEXT_PUBLIC_IMAGE_BASE_URL || 'https://anukab
 //     }
 //   }
 
-//   // Add to cart function
+//   // Add to cart function - ALWAYS store in localStorage (for both guest and logged-in users)
 //   const addToCart = async (product: GetProduct) => {
-//     if (!token) {
-//       toast({
-//         title: 'Login Required',
-//         description: 'Please login to add items to cart.',
-//         variant: 'destructive',
-//       })
-//       return
-//     }
+//     const existingItem = cartItems.find((item) => item.productId === product.id)
 
-//     try {
-//       console.log('Adding product to cart:', product.id)
-
-//       const response = await createCart(token, { productId: product.id })
-
-//       console.log('Cart response:', response)
-
-//       if (response?.data) {
-//         // Show success message
-//         const message =
-//           response.data.message || 'Product added to cart successfully!'
-//         toast({
-//           title: 'Success',
-//           description: message,
-//         })
-
-//         // Reload cart from database
-//         await loadUserCart()
-//       } else {
-//         toast({
-//           title: 'Error',
-//           description: 'Failed to add product to cart.',
-//           variant: 'destructive',
-//         })
+//     let updatedCart: GetCart[]
+//     if (existingItem) {
+//       // Increment quantity
+//       updatedCart = cartItems.map((item) =>
+//         item.productId === product.id
+//           ? { ...item, quantity: item.quantity + 1 }
+//           : item
+//       )
+//     } else {
+//       // Add new item
+//       const newCartItem: GetCart = {
+//         cartId: 0, // Temporary ID for cart
+//         productId: product.id,
+//         name: product.name,
+//         price: product.price,
+//         quantity: 1,
+//         url: product.url,
+//         createdAt: new Date().toISOString(), // Current timestamp
 //       }
-//     } catch (err: any) {
-//       console.error('Failed to add to cart:', err)
-
-//       // Show more detailed error message
-//       toast({
-//         title: 'Error',
-//         description:
-//           err.message || 'Failed to add product to cart. Please try again.',
-//         variant: 'destructive',
-//       })
+//       updatedCart = [...cartItems, newCartItem]
 //     }
+
+//     setCartItems(updatedCart)
+//     saveGuestCart(updatedCart)
+
+//     toast({
+//       title: 'Success',
+//       description: 'Product added to cart successfully!',
+//     })
 //   }
 
-//   // Update quantity in cart - using addToCart for increment and deleteCart for decrement
+//   // Update quantity in cart - ALWAYS update localStorage (for both guest and logged-in users)
 //   const updateQuantity = async (productId: number, change: number) => {
-//     if (!token) return
-
 //     const cartItem = cartItems.find((item) => item.productId === productId)
-//     const product = products.find((p) => p.id === productId)
+//     if (!cartItem) return
 
-//     if (!cartItem || !product) return
+//     let updatedCart: GetCart[]
+//     const newQuantity = cartItem.quantity + change
 
-//     try {
-//       if (change > 0) {
-//         // For increment (+), call the addToCart API
-//         await createCart(token, { productId: product.id })
-//         // Reload cart from database to get updated quantity
-//         await loadUserCart()
-//       } else {
-//         // For decrement (-), call the deleteCart API
-//         const response = await deleteCart(token, productId)
-
-//         console.log('Delete cart response:', response)
-
-//         if (response?.data) {
-//           // Reload cart from database to get updated quantity or removed item
-//           await loadUserCart()
-//         } else {
-//           toast({
-//             title: 'Error',
-//             description: 'Failed to update cart.',
-//             variant: 'destructive',
-//           })
-//         }
-//       }
-//     } catch (err: any) {
-//       console.error('Failed to update cart:', err)
-
-//       // Show more detailed error message
-//       toast({
-//         title: 'Error',
-//         description: err.message || 'Failed to update cart. Please try again.',
-//         variant: 'destructive',
-//       })
+//     if (newQuantity <= 0) {
+//       // Remove item if quantity becomes 0 or less
+//       updatedCart = cartItems.filter((item) => item.productId !== productId)
+//     } else {
+//       // Update quantity
+//       updatedCart = cartItems.map((item) =>
+//         item.productId === productId ? { ...item, quantity: newQuantity } : item
+//       )
 //     }
+
+//     setCartItems(updatedCart)
+//     saveGuestCart(updatedCart)
 //   }
 
 //   const getTotalPrice = () => {
@@ -986,8 +953,9 @@ const IMAGE_BASE_URL = process.env.NEXT_PUBLIC_IMAGE_BASE_URL || 'https://anukab
 //     localStorage.setItem('currentUser', JSON.stringify(user))
 //     localStorage.setItem('roleId', String(user.roleId ?? 0))
 //     setSavedRoleId(user.roleId ?? 0)
-//     await loadUserCart() // Load cart after login
-//      // Refresh the page after successful login
+
+//     // Don't merge cart - keep everything in localStorage
+//     // Just refresh the page after successful login
 //     window.location.reload()
 //   }
 
@@ -1014,11 +982,12 @@ const IMAGE_BASE_URL = process.env.NEXT_PUBLIC_IMAGE_BASE_URL || 'https://anukab
 //     setCurrentUser('')
 //     setRoleId(null)
 //     setSavedRoleId(null)
-//     setCartItems([]) // Clear cart items on logout
+//     // Don't clear cart items - keep them in localStorage
 //     localStorage.removeItem('authToken')
 //     localStorage.removeItem('currentUser')
 //     localStorage.removeItem('roleId')
-//      // Refresh the page after successful login
+//     // Keep guestCart in localStorage
+//     // Refresh the page after logout
 //     window.location.reload()
 //   }
 
@@ -1055,17 +1024,9 @@ const IMAGE_BASE_URL = process.env.NEXT_PUBLIC_IMAGE_BASE_URL || 'https://anukab
 //       })
 
 //       if (response?.data) {
-//         // Delete all cart items one by one if backend doesn't handle it
-//         try {
-//           for (const item of cartItems) {
-//             await deleteCart(token, item.productId)
-//           }
-//         } catch (deleteErr) {
-//           console.error('Error clearing cart:', deleteErr)
-//         }
-
-//         // Clear cart after successful order
+//         // Clear cart from localStorage after successful order
 //         setCartItems([])
+//         localStorage.removeItem('guestCart')
 
 //         // Close checkout modal
 //         setIsCheckoutOpen(false)
@@ -1075,9 +1036,6 @@ const IMAGE_BASE_URL = process.env.NEXT_PUBLIC_IMAGE_BASE_URL || 'https://anukab
 //           title: 'Order Placed Successfully!',
 //           description: `Total Amount: ৳${response.data.totalOrderAmount || getTotalPrice()}. You will receive a confirmation call shortly.`,
 //         })
-
-//         // Reload cart from database (should be empty now)
-//         await loadUserCart()
 //       } else {
 //         toast({
 //           title: 'Order Failed',
@@ -1097,7 +1055,13 @@ const IMAGE_BASE_URL = process.env.NEXT_PUBLIC_IMAGE_BASE_URL || 'https://anukab
 //     }
 //   }
 
-//   if (loading) return <p className="text-center mt-10">Loading...</p>
+//   if (loading)
+//     return (
+//       <div className="flex items-center justify-center min-h-screen">
+//         <Loader />
+//       </div>
+//     )
+
 //   if (error) return <p className="text-center text-red-500">{error}</p>
 
 //   return (
@@ -1136,7 +1100,7 @@ const IMAGE_BASE_URL = process.env.NEXT_PUBLIC_IMAGE_BASE_URL || 'https://anukab
 //                   ...product,
 //                   url: product.url.startsWith('http')
 //                     ? product.url
-//                     : `https://anukabd.com/api/uploads/${product.url}`,
+//                     : `http://localhost:4000/uploads/${product.url}`,
 //                 }}
 //                 onProductClick={openProductModal}
 //                 onAddToCart={addToCart}
@@ -1195,13 +1159,12 @@ const IMAGE_BASE_URL = process.env.NEXT_PUBLIC_IMAGE_BASE_URL || 'https://anukab
 //                             ...product,
 //                             url: product.url.startsWith('http')
 //                               ? product.url
-//                               : `https://anukabd.com/api/uploads/${product.url}`,
+//                               : `http://localhost:4000/uploads/${product.url}`,
 //                           }}
 //                           onProductClick={openProductModal}
 //                           onAddToCart={addToCart}
 //                         />
 //                       ))}
-
 //                     </div>
 
 //                     {isExpanded && hasMore && (
@@ -1228,14 +1191,7 @@ const IMAGE_BASE_URL = process.env.NEXT_PUBLIC_IMAGE_BASE_URL || 'https://anukab
 //       )}
 
 //       {/* Product Details Modal */}
-//       {selectedProduct && (
-//         <ProductDetails
-//           product={selectedProduct}
-//           // isOpen={isProductModalOpen}
-//           // onClose={closeProductModal}
-//           // onAddToCart={addToCart}
-//         />
-//       )}
+//       {selectedProduct && <ProductDetails product={selectedProduct} />}
 
 //       {/* Cart Sidebar */}
 //       {isCartOpen && (
@@ -1280,7 +1236,7 @@ const IMAGE_BASE_URL = process.env.NEXT_PUBLIC_IMAGE_BASE_URL || 'https://anukab
 //                         src={
 //                           item.url?.startsWith('http')
 //                             ? item.url
-//                             : `https://anukabd.com/api/uploads/${item.url}`
+//                             : `http://localhost:4000/uploads/${item.url}`
 //                         }
 //                         alt={item.name}
 //                         className="w-12 h-12 sm:w-16 sm:h-16 object-cover rounded"
@@ -1333,8 +1289,18 @@ const IMAGE_BASE_URL = process.env.NEXT_PUBLIC_IMAGE_BASE_URL || 'https://anukab
 //                 <Button
 //                   className="w-full bg-green-600 hover:bg-green-700 text-white text-sm sm:text-base py-2 sm:py-3"
 //                   onClick={() => {
-//                     setIsCartOpen(false)
-//                     setIsCheckoutOpen(true)
+//                     if (!token) {
+//                       setIsCartOpen(false)
+//                       setIsRegisterOpen(true)
+//                       toast({
+//                         title: 'Registration Required',
+//                         description: 'Please register to proceed to checkout.',
+//                         variant: 'destructive',
+//                       })
+//                     } else {
+//                       setIsCartOpen(false)
+//                       setIsCheckoutOpen(true)
+//                     }
 //                   }}
 //                 >
 //                   Proceed to Checkout
@@ -1360,9 +1326,14 @@ const IMAGE_BASE_URL = process.env.NEXT_PUBLIC_IMAGE_BASE_URL || 'https://anukab
 //       <RegisterForm
 //         isOpen={isRegisterOpen}
 //         onClose={() => setIsRegisterOpen(false)}
-//         onRegister={(user) =>
-//           handleLogin({ userId: 0, username: user.username, email: user.email })
-//         }
+//         onRegister={async (user) => {
+//           // After registration, trigger login flow
+//           await handleLogin({
+//             userId: 0,
+//             username: user.username,
+//             email: user.email,
+//           })
+//         }}
 //         onSwitchToLogin={() => {
 //           setIsRegisterOpen(false)
 //           setIsLoginOpen(true)

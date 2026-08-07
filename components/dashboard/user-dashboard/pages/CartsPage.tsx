@@ -3,20 +3,20 @@
 import React, { useState, useCallback, useEffect } from 'react'
 import { GetCart } from '@/utils/type'
 import { Button } from '@/components/ui/button'
-import { Loader, Minus, Plus } from 'lucide-react'
+import { Minus, Plus, ShoppingCart } from 'lucide-react'
 import Image from 'next/image'
+import Loader from '@/utils/loader'
 
 const CartsPage = () => {
   const [carts, setCarts] = useState<GetCart[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // ✅ Load carts from localStorage
   const loadCarts = useCallback(() => {
     try {
       setLoading(true)
       setError(null)
-      
+
       const guestCart = localStorage.getItem('guestCart')
       if (guestCart) {
         const parsedCart: GetCart[] = JSON.parse(guestCart)
@@ -32,7 +32,6 @@ const CartsPage = () => {
     }
   }, [])
 
-  // ✅ Save carts to localStorage
   const saveCarts = useCallback((updatedCarts: GetCart[]) => {
     try {
       localStorage.setItem('guestCart', JSON.stringify(updatedCarts))
@@ -43,7 +42,6 @@ const CartsPage = () => {
     }
   }, [])
 
-  // ✅ Decrease quantity (delete if quantity becomes 0)
   const handleDecrease = useCallback(
     (productId: number) => {
       const cartItem = carts.find((item) => item.productId === productId)
@@ -53,10 +51,8 @@ const CartsPage = () => {
       const newQuantity = cartItem.quantity - 1
 
       if (newQuantity <= 0) {
-        // Remove item if quantity becomes 0 or less
         updatedCarts = carts.filter((item) => item.productId !== productId)
       } else {
-        // Update quantity
         updatedCarts = carts.map((item) =>
           item.productId === productId
             ? { ...item, quantity: newQuantity }
@@ -69,7 +65,6 @@ const CartsPage = () => {
     [carts, saveCarts]
   )
 
-  // ✅ Increase quantity
   const handleIncrease = useCallback(
     (productId: number) => {
       const updatedCarts = carts.map((item) =>
@@ -87,132 +82,149 @@ const CartsPage = () => {
     loadCarts()
   }, [loadCarts])
 
-  if (loading) return 
-  <div>
-    <Loader />
-  </div>
-  if (error) return <p className="text-sm sm:text-base text-red-500">{error}</p>
+  const getImageSrc = (url?: string) =>
+    url?.startsWith('http') ? url : `https://anukabd.com/api/uploads/${url}`
+
+  const totalAmount = carts.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  )
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[40vh]">
+        <Loader />
+      </div>
+    )
+  }
+
+  if (error) {
+    return <p className="text-sm sm:text-base text-red-500">{error}</p>
+  }
 
   return (
     <div className="w-full">
-      <h1 className="text-xl sm:text-2xl font-semibold text-gray-800 mb-3 sm:mb-4">My Cart</h1>
-      <div className="bg-white rounded-lg shadow p-3 sm:p-6">
+      <h1 className="text-xl sm:text-2xl font-semibold text-gray-800 mb-4 sm:mb-6">
+        My Cart
+      </h1>
+
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         {carts.length === 0 ? (
-          <p className="text-sm sm:text-base text-gray-600">Your cart is empty.</p>
+          <div className="flex flex-col items-center justify-center py-14 text-center px-4">
+            <ShoppingCart className="text-gray-300 mb-3" size={40} />
+            <p className="text-sm sm:text-base text-gray-500">
+              Your cart is empty.
+            </p>
+          </div>
         ) : (
           <>
-            {/* Mobile Card View - visible only on small screens */}
-            <div className="block lg:hidden space-y-4">
+            {/* Mobile Card View */}
+            <div className="block lg:hidden divide-y divide-gray-100">
               {carts.map((item, index) => (
-                <div key={item.cartId || index} className="border rounded-lg p-3 bg-gray-50">
-                  <div className="flex gap-3">
-                    {/* Image */}
-                    <div className="w-16 h-16 sm:w-20 sm:h-20 relative flex-shrink-0">
-                      <Image
-                        src={
-                          item.url?.startsWith('http')
-                            ? item.url
-                            : `https://anukabd.com/api/uploads/${item.url}`
-                        }
-                        alt={item.name}
-                        fill
-                        className="object-cover rounded"
-                      />
-                    </div>
-                    
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-sm sm:text-base font-medium text-gray-800 truncate">
-                        {item.name}
-                      </h3>
-                      <p className="text-xs sm:text-sm text-gray-600 mt-1">
-                        Price: ৳ {item.price * item.quantity}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        {new Date(item.createdAt).toLocaleDateString()}
-                      </p>
-                      
-                      {/* Quantity Controls */}
-                      <div className="flex items-center gap-2 mt-2">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-7 w-7 sm:h-8 sm:w-8 border-gray-300"
-                          onClick={() => handleDecrease(item.productId)}
-                        >
-                          <Minus className="w-3 h-3 sm:w-4 sm:h-4" />
-                        </Button>
-                        <span className="text-sm sm:text-base font-medium min-w-[1.5rem] text-center">
-                          {item.quantity}
-                        </span>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-7 w-7 sm:h-8 sm:w-8 border-gray-300"
-                          onClick={() => handleIncrease(item.productId)}
-                        >
-                          <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
-                        </Button>
-                      </div>
+                <div key={item.cartId || index} className="p-4 flex gap-3">
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 relative flex-shrink-0 rounded-lg overflow-hidden border border-gray-100">
+                    <Image
+                      src={getImageSrc(item.url)}
+                      alt={item.name}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm sm:text-base font-medium text-gray-800 truncate">
+                      {item.name}
+                    </h3>
+                    <p className="text-sm text-gray-700 font-semibold mt-1">
+                      ৳{item.price * item.quantity}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {new Date(item.createdAt).toLocaleDateString()}
+                    </p>
+
+                    <div className="flex items-center gap-2 mt-2">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-7 w-7 sm:h-8 sm:w-8 border-gray-200"
+                        onClick={() => handleDecrease(item.productId)}
+                      >
+                        <Minus className="w-3 h-3 sm:w-4 sm:h-4" />
+                      </Button>
+                      <span className="text-sm sm:text-base font-medium min-w-[1.5rem] text-center">
+                        {item.quantity}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-7 w-7 sm:h-8 sm:w-8 border-gray-200"
+                        onClick={() => handleIncrease(item.productId)}
+                      >
+                        <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
+                      </Button>
                     </div>
                   </div>
                 </div>
               ))}
+              <div className="p-4 flex justify-between items-center bg-gray-50">
+                <span className="text-sm text-gray-600">Total</span>
+                <span className="text-base font-semibold text-gray-900">
+                  ৳{totalAmount}
+                </span>
+              </div>
             </div>
 
-            {/* Desktop Table View - hidden on small screens */}
+            {/* Desktop Table View */}
             <div className="hidden lg:block overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
+              <table className="w-full text-left text-sm">
+                <thead className="bg-gray-50 text-gray-600 uppercase text-xs">
                   <tr>
-                    <th className="border-b p-3 w-16">#</th>
-                    <th className="border-b p-3">Image</th>
-                    <th className="border-b p-3">Product Name</th>
-                    <th className="border-b p-3">Price</th>
-                    <th className="border-b p-3">Added On</th>
-                    <th className="border-b p-3 text-center">Quantity</th>
+                    <th className="p-4 w-14">#</th>
+                    <th className="p-4">Image</th>
+                    <th className="p-4">Product Name</th>
+                    <th className="p-4">Price</th>
+                    <th className="p-4">Added On</th>
+                    <th className="p-4 text-center">Quantity</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-gray-100">
                   {carts.map((item, index) => (
-                    <tr key={item.cartId || index} className="hover:bg-gray-50">
-                      <td className="p-3">{index + 1}</td>
-                      <td className="px-4 py-2 border">
-                        <div className="w-20 h-20 relative mx-auto">
+                    <tr key={item.cartId || index} className="hover:bg-gray-50 transition-colors">
+                      <td className="p-4 text-gray-500">{index + 1}</td>
+                      <td className="p-4">
+                        <div className="w-16 h-16 relative rounded-lg overflow-hidden border border-gray-100">
                           <Image
-                            src={
-                              item.url?.startsWith('http')
-                                ? item.url
-                                : `https://anukabd.com/api/uploads/${item.url}`
-                            }
+                            src={getImageSrc(item.url)}
                             alt={item.name}
                             fill
-                            className="object-cover rounded"
+                            className="object-cover"
                           />
                         </div>
                       </td>
-                      <td className="p-3">{item.name}</td>
-                      <td className="p-3">৳ {item.price * item.quantity}</td>
-                      <td className="p-3">
+                      <td className="p-4 font-medium text-gray-800">{item.name}</td>
+                      <td className="p-4 font-semibold text-gray-900">
+                        ৳{item.price * item.quantity}
+                      </td>
+                      <td className="p-4 text-gray-500 text-xs">
                         {new Date(item.createdAt).toLocaleDateString()}
                       </td>
-                      <td className="p-3">
+                      <td className="p-4">
                         <div className="flex items-center justify-center gap-3">
                           <Button
                             variant="outline"
                             size="icon"
-                            className="h-8 w-8 border-gray-300 hover:bg-gray-100"
+                            className="h-8 w-8 border-gray-200 hover:bg-gray-100"
                             onClick={() => handleDecrease(item.productId)}
                           >
                             <Minus className="w-4 h-4" />
                           </Button>
-                          <span className="text-lg font-medium min-w-[2rem] text-center">
+                          <span className="text-base font-medium min-w-[2rem] text-center">
                             {item.quantity}
                           </span>
                           <Button
                             variant="outline"
                             size="icon"
-                            className="h-8 w-8 border-gray-300 hover:bg-gray-100"
+                            className="h-8 w-8 border-gray-200 hover:bg-gray-100"
                             onClick={() => handleIncrease(item.productId)}
                           >
                             <Plus className="w-4 h-4" />
@@ -222,6 +234,16 @@ const CartsPage = () => {
                     </tr>
                   ))}
                 </tbody>
+                <tfoot>
+                  <tr className="bg-gray-50">
+                    <td colSpan={3} className="p-4 text-right font-medium text-gray-600">
+                      Total
+                    </td>
+                    <td colSpan={3} className="p-4 font-semibold text-gray-900">
+                      ৳{totalAmount}
+                    </td>
+                  </tr>
+                </tfoot>
               </table>
             </div>
           </>
@@ -237,254 +259,7 @@ export default CartsPage
 
 
 
-// 'use client'
 
-// import React, { useState, useCallback, useEffect } from 'react'
-// import { fetchCarts, deleteCart, createCart } from '@/api/cart-api'
-// import { useAtom } from 'jotai'
-// import { tokenAtom, useInitializeUser } from '@/utils/user'
-// import { GetCart } from '@/utils/type'
-// import { Button } from '@/components/ui/button'
-// import { Minus, Plus } from 'lucide-react'
-// import Image from 'next/image'
 
-// const CartsPage = () => {
-//   useInitializeUser() // initialize user info
 
-//   const [token] = useAtom(tokenAtom)
-//   const [carts, setCarts] = useState<GetCart[]>([])
-//   const [loading, setLoading] = useState(true)
-//   const [error, setError] = useState<string | null>(null)
 
-//   // ✅ Fetch all carts
-//   const loadCarts = useCallback(async () => {
-//     if (!token) {
-//       setError('Please log in to view your cart.')
-//       setLoading(false)
-//       return
-//     }
-
-//     try {
-//       setLoading(true)
-//       setError(null)
-//       const res = await fetchCarts(token)
-
-//       if (!res || !res.data) {
-//         setError('No carts found.')
-//         return
-//       }
-
-//       setCarts(res.data)
-//     } catch (err) {
-//       console.error('Failed to load carts:', err)
-//       setError('Failed to load carts.')
-//     } finally {
-//       setLoading(false)
-//     }
-//   }, [token])
-
-//   // ✅ Delete a specific cart item
-//   const handleDelete = useCallback(
-//     async (productId: number) => {
-//       if (!token) {
-//         setError('Please log in to delete cart items.')
-//         return
-//       }
-
-//       try {
-//         await deleteCart(token, productId)
-//         // refresh cart after delete
-//         await loadCarts()
-//       } catch (err) {
-//         console.error('Failed to delete cart:', err)
-//         setError('Failed to delete cart.')
-//       }
-//     },
-//     [token, loadCarts]
-//   )
-
-//   // ✅ Decrease quantity (delete if quantity becomes 0)
-//   const handleDecrease = useCallback(
-//     async (productId: number) => {
-//       if (!token) return
-
-//       try {
-//         // For now, just delete the item when clicking minus
-//         // You may need to add an updateCart API if you want to decrease quantity
-//         await deleteCart(token, productId)
-//         await loadCarts()
-//       } catch (err) {
-//         console.error('Failed to decrease quantity:', err)
-//         setError('Failed to update cart.')
-//       }
-//     },
-//     [token, loadCarts]
-//   )
-
-//   // ✅ Increase quantity
-//   const handleIncrease = useCallback(
-//     async (productId: number) => {
-//       if (!token) {
-//         setError('Please log in to update cart.')
-//         return
-//       }
-
-//       try {
-//         console.log('Adding product to cart:', productId)
-
-//         const response = await createCart(token, { productId })
-
-//         console.log('Cart response:', response)
-
-//         if (response?.data) {
-//           // Reload cart from database
-//           await loadCarts()
-//         } else {
-//           setError('Failed to add product to cart.')
-//         }
-//       } catch (err: any) {
-//         console.error('Failed to add to cart:', err)
-//         setError(err.message || 'Failed to update cart.')
-//       }
-//     },
-//     [token, loadCarts]
-//   )
-
-//   useEffect(() => {
-//     loadCarts()
-//   }, [loadCarts])
-
-//   if (loading) return <p className="text-sm sm:text-base text-gray-600">Loading carts...</p>
-//   if (error) return <p className="text-sm sm:text-base text-red-500">{error}</p>
-
-//   return (
-//     <div className="w-full">
-//       <h1 className="text-xl sm:text-2xl font-semibold text-gray-800 mb-3 sm:mb-4">My Cart</h1>
-//       <div className="bg-white rounded-lg shadow p-3 sm:p-6">
-//         {carts.length === 0 ? (
-//           <p className="text-sm sm:text-base text-gray-600">Your cart is empty.</p>
-//         ) : (
-//           <>
-//             {/* Mobile Card View - visible only on small screens */}
-//             <div className="block lg:hidden space-y-4">
-//               {carts.map((item, index) => (
-//                 <div key={item.cartId} className="border rounded-lg p-3 bg-gray-50">
-//                   <div className="flex gap-3">
-//                     {/* Image */}
-//                     <div className="w-16 h-16 sm:w-20 sm:h-20 relative flex-shrink-0">
-//                       <Image
-//                         src={item.url}
-//                         alt={item.name}
-//                         fill
-//                         className="object-cover rounded"
-//                       />
-//                     </div>
-                    
-//                     {/* Content */}
-//                     <div className="flex-1 min-w-0">
-//                       <h3 className="text-sm sm:text-base font-medium text-gray-800 truncate">
-//                         {item.name}
-//                       </h3>
-//                       <p className="text-xs sm:text-sm text-gray-600 mt-1">
-//                         Price: ৳ {item.price * item.quantity}
-//                       </p>
-//                       <p className="text-xs text-gray-500 mt-0.5">
-//                         {new Date(item.createdAt).toLocaleDateString()}
-//                       </p>
-                      
-//                       {/* Quantity Controls */}
-//                       <div className="flex items-center gap-2 mt-2">
-//                         <Button
-//                           variant="outline"
-//                           size="icon"
-//                           className="h-7 w-7 sm:h-8 sm:w-8 border-gray-300"
-//                           onClick={() => handleDecrease(item.productId)}
-//                         >
-//                           <Minus className="w-3 h-3 sm:w-4 sm:h-4" />
-//                         </Button>
-//                         <span className="text-sm sm:text-base font-medium min-w-[1.5rem] text-center">
-//                           {item.quantity}
-//                         </span>
-//                         <Button
-//                           variant="outline"
-//                           size="icon"
-//                           className="h-7 w-7 sm:h-8 sm:w-8 border-gray-300"
-//                           onClick={() => handleIncrease(item.productId)}
-//                         >
-//                           <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
-//                         </Button>
-//                       </div>
-//                     </div>
-//                   </div>
-//                 </div>
-//               ))}
-//             </div>
-
-//             {/* Desktop Table View - hidden on small screens */}
-//             <div className="hidden lg:block overflow-x-auto">
-//               <table className="w-full text-left border-collapse">
-//                 <thead>
-//                   <tr>
-//                     <th className="border-b p-3 w-16">#</th>
-//                     <th className="border-b p-3">Image</th>
-//                     <th className="border-b p-3">Product Name</th>
-//                     <th className="border-b p-3">Price</th>
-//                     <th className="border-b p-3">Added On</th>
-//                     <th className="border-b p-3 text-center">Quantity</th>
-//                   </tr>
-//                 </thead>
-//                 <tbody>
-//                   {carts.map((item, index) => (
-//                     <tr key={item.cartId} className="hover:bg-gray-50">
-//                       <td className="p-3">{index + 1}</td>
-//                       <td className="px-4 py-2 border">
-//                         <div className="w-20 h-20 relative mx-auto">
-//                           <Image
-//                             src={item.url}
-//                             alt={item.name}
-//                             fill
-//                             className="object-cover rounded"
-//                           />
-//                         </div>
-//                       </td>
-//                       <td className="p-3">{item.name}</td>
-//                       <td className="p-3">৳ {item.price * item.quantity}</td>
-//                       <td className="p-3">
-//                         {new Date(item.createdAt).toLocaleDateString()}
-//                       </td>
-//                       <td className="p-3">
-//                         <div className="flex items-center justify-center gap-3">
-//                           <Button
-//                             variant="outline"
-//                             size="icon"
-//                             className="h-8 w-8 border-gray-300 hover:bg-gray-100"
-//                             onClick={() => handleDecrease(item.productId)}
-//                           >
-//                             <Minus className="w-4 h-4" />
-//                           </Button>
-//                           <span className="text-lg font-medium min-w-[2rem] text-center">
-//                             {item.quantity}
-//                           </span>
-//                           <Button
-//                             variant="outline"
-//                             size="icon"
-//                             className="h-8 w-8 border-gray-300 hover:bg-gray-100"
-//                             onClick={() => handleIncrease(item.productId)}
-//                           >
-//                             <Plus className="w-4 h-4" />
-//                           </Button>
-//                         </div>
-//                       </td>
-//                     </tr>
-//                   ))}
-//                 </tbody>
-//               </table>
-//             </div>
-//           </>
-//         )}
-//       </div>
-//     </div>
-//   )
-// }
-
-// export default CartsPage
